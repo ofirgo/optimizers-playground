@@ -1,4 +1,8 @@
+from typing import Callable
+
 import numpy as np
+
+from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import uniform_quantize_tensor
 
 
 def quantization_derivative_min_level(x: np.ndarray, a: float, b: float, n_bits: int):
@@ -55,6 +59,17 @@ def quantization_derivative_threshold(x: np.ndarray, t: float, n_bits: int):
         dQ.append(d)
     return dQ
 
+
+def min_man_derivative(float_tensor: np.ndarray, a: float, b: float, n_bits: int, loss_fn: Callable):
+    dQ_da = loss_fn(x=float_tensor,
+                     q=uniform_quantize_tensor(float_tensor, range_min=a, range_max=b, n_bits=n_bits),
+                     dQ=quantization_derivative_min_level(float_tensor, a=a, b=b, n_bits=n_bits))
+
+    dQ_db = loss_fn(x=float_tensor,
+                    q=uniform_quantize_tensor(float_tensor, range_min=a, range_max=b, n_bits=n_bits),
+                    dQ=quantization_derivative_max_level(float_tensor, a=a, b=b, n_bits=n_bits))
+
+    return np.asarray([dQ_da, dQ_db])
 
 def mse_derivative(x: np.ndarray, q: np.ndarray, dQ: np.ndarray):
     n = len(x)

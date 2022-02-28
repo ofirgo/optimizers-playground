@@ -81,12 +81,13 @@ def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient:
 
 
 def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_iter: int = 50,
-                     learn_rate: float = 0.1, tolerance: float = 1e-06, draw: bool = False):
+                     learn_rate: float = 0.1, tolerance: float = 1e-06, grad_norm: float = False, draw: bool = False):
     vector = param  # this is the parameter we are optimizing
     loss_res = []
     param_res = []
     best = {"param": vector, "loss": loss_fn(vector, x), "it": 0}
     real_n_iter = n_iter
+    grad_squared = 0
     for i in range(n_iter):
         print(f"### Iteration {i} ###")
         param_res.append(vector)
@@ -99,8 +100,8 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
             break
 
         grad = gradient(vector, x)
-        diff = -learn_rate * grad
-        vector += diff
+        grad_squared = 1 if not grad_norm else grad_squared + (grad ** 2)  # running sum for gradient normalization
+        vector = vector - (learn_rate / np.sqrt(grad_squared)) * grad
 
         print(f"Param = {vector}")
         print(f"Loss: {loss}")
@@ -125,8 +126,9 @@ def threshold_gd_example(weights_tensor, n_bits):
                            loss_fn=loss_fn,
                            gradient=grad_fn,
                            n_iter=30,
-                           learn_rate=0.005,
-                           tolerance=1e-06,
+                           learn_rate=1e-2,
+                           tolerance=1e-6,
+                           grad_norm=True,
                            draw=True)
 
     # batch_res = minibatch_sgd(param=init_param.copy(),
@@ -156,9 +158,10 @@ def min_max_gd_example(weights_tensor, n_bits):
                            x=weights_tensor.copy(),
                            loss_fn=loss_fn,
                            gradient=grad_fn,
-                           n_iter=50,
-                           learn_rate=0.01,
-                           tolerance=1e-06,
+                           n_iter=100,
+                           learn_rate=1e-2,
+                           tolerance=1e-6,
+                           grad_norm=True,
                            draw=True)
 
     # batch_res = minibatch_sgd(param=init_param.copy(),
@@ -178,8 +181,8 @@ def min_max_gd_example(weights_tensor, n_bits):
 
 if __name__ == "__main__":
     loaded_weights = load_network_weights(model_name='mobilenetv2',
-                                          layers=['block_2_depthwise'])
-    weights_tensor = loaded_weights['block_2_depthwise']['weights']
+                                          layers=['block_3_depthwise'])
+    weights_tensor = loaded_weights['block_3_depthwise']['weights']
     print(weights_tensor.shape)
     weights_tensor = weights_tensor.flatten()
 

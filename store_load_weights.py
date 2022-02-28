@@ -1,5 +1,6 @@
 import pickle
 from tensorflow_fw.network_archives.tf_network_dict import tf_network_dict
+from model_compression_toolkit.keras.default_framework_info import DEFAULT_CHANNEL_AXIS_DICT
 
 """
 This code is used to export wights tensors of networks for side debugging and research purposes.
@@ -16,8 +17,9 @@ def get_network_weights(model_name):
     model = tf_network_dict.get(model_name).get_model()
     for layer in model.layers:
         layer_weights = layer.get_weights()
+        channel_axis = DEFAULT_CHANNEL_AXIS_DICT.get(type(layer))[1]
         if len(layer_weights) > 0:
-            weights[layer.name] = layer_weights[0]  # index 0 is weights, index 1 is bias
+            weights[layer.name] = {'weights': layer_weights[0], 'channel_axis': channel_axis}  # index 0 in layer_weights is weights, index 1 is bias
     return weights
 
 
@@ -32,15 +34,27 @@ def load_network_weights(model_name, layers):
 
 def load_layer_weights(model_name, layer_name):
     filename = f"{WEIGHTS_DB_PATH}/{FILENAME_PREFIX}_{model_name}_{layer_name}"
-    with open(filename, 'rb') as infile:
+    channels_filename = f"{WEIGHTS_DB_PATH}/channels"
+    with open(filename, 'rb') as infile, open(channels_filename, 'r') as channels_file:
+        # get layer's channel axis
+        channels = [line.rstrip('\n') for line in channels_file]
+        channels = list(filter(lambda c: f"{model_name}_{layer_name}" in c, channels))
+        if len(channels) == 0:
+            print(f"Layer {layer_name} channel axis is not recorded, considering no channel axis")
+            channel_axis = None
+        else:
+            channel_axis = channels[0].split(" ")[1]
+            channel_axis = None if channel_axis == "None" else int(channel_axis)
+
         layer_weights = pickle.load(infile)
-        return layer_weights
+        return {'weights': layer_weights, 'channel_axis': channel_axis}
 
 
 def store_network_weights(weights_dict, model_name, layers=None):
     if not layers:
         # store weights of all layers
         for layer_name, weights in weights_dict.items():
+            # weights is a dict with weights tensor and channel axis
             store_layer_weights(model_name, layer_name, weights)
     else:
         # store weights of specific layers
@@ -49,9 +63,12 @@ def store_network_weights(weights_dict, model_name, layers=None):
 
 
 def store_layer_weights(model_name, layer_name, weights):
+    # weights is a dict with weights tensor and channel axis !!!
     filename = f"{WEIGHTS_DB_PATH}/{FILENAME_PREFIX}_{model_name}_{layer_name}"
-    with open(filename, 'wb') as outfile:
-        pickle.dump(weights, outfile)
+    channels_filename = f"{WEIGHTS_DB_PATH}/channels"
+    with open(filename, 'wb') as outfile, open(channels_filename, 'a') as channels_file:
+        channels_file.write(f"{model_name}_{layer_name} {weights['channel_axis']}\n")
+        pickle.dump(weights['weights'], outfile)
 
 
 def create_network_weights_db(model_name, layers_names_cond):
@@ -61,18 +78,42 @@ def create_network_weights_db(model_name, layers_names_cond):
     store_network_weights(model_weights, model_name, layers_to_store)
 
 
+def create_network_all_weights_db(model_name):
+    model_weights = get_network_weights(model_name)  # layer_name -> weights_tensor
+
+    store_network_weights(model_weights, model_name, None)
+
+
 if __name__ == "__main__":
+    ####
+    # Single layer store and load example
+    ####
     # weights_dict = get_network_weights('mobilenetv2')
+    # print(weights_dict['block_14_depthwise']['weights'].shape, weights_dict['block_14_depthwise']['channel_axis'])
+    # print(weights_dict['block_14_depthwise_BN']['weights'].shape, weights_dict['block_14_depthwise_BN']['channel_axis'])
+    # store_network_weights(weights_dict, 'mobilenetv2', ['block_14_depthwise'])
     # store_network_weights(weights_dict, 'mobilenetv2', ['block_14_depthwise_BN'])
-    # load_layer_weights('mobilenetv2', 'block_14_depthwise_BN')
-    # print(WEIGHTS['mobilenetv2']['block_14_depthwise_BN'].shape)
+    # loaded_weights = load_network_weights('mobilenetv2', ['block_14_depthwise', 'block_14_depthwise_BN'])
+    # print(loaded_weights['block_14_depthwise']['weights'].shape, loaded_weights['block_14_depthwise']['channel_axis'])
+    # print(loaded_weights['block_14_depthwise_BN']['weights'].shape, loaded_weights['block_14_depthwise_BN']['channel_axis'])
 
+    ####
+    # Store layers by pattern
+    ####
     # create_network_weights_db(model_name='mobilenetv2',
-    #                           layers_names_cond=lambda name: "block" in name and "depthwise_BN" in name)
+    #                           layers_names_cond=lambda name: "block" in name and "depthwise" in name)
 
-    loaded_weights = load_network_weights(model_name='mobilenetv2',
-                                          layers=['block_7_depthwise_BN',
-                                                  'block_9_depthwise_BN',
-                                                  'block_14_depthwise_BN'])
+    ####
+    # Store all layers
+    ####
+    model_name = 'mobilenetv2'
+    create_network_all_weights_db(model_name)
+
+    ####
+    # Load multiple layers
+    ####
+    loaded_weights = load_network_weights(model_name=model_name,
+                         layers=['block_8_project_BN', 'block_8_project', 'block_8_expand_BN', 'block_8_expand',
+                                 'block_8_depthwise_BN', 'block_8_depthwise'])
     for l_name, weights in loaded_weights.items():
-        print(l_name, weights.shape)
+        print(l_name, weights['weights'].shape, weights['channel_axis'])

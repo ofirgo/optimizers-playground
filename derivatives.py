@@ -10,15 +10,16 @@ def quantization_derivative_min_level(x: np.ndarray, a: float, b: float, n_bits:
     # TODO: vectorize
 
     dQ = []
+    s = (b - a) / (2 ** n_bits - 1)
     for i in range(len(x)):
         x_i = x[i]
-        if x_i <= 0:
+        clip_elem = (x_i - a) / s
+        if clip_elem <= 0:
             d = 1
-        elif x_i >= 2 ** n_bits - 1:
-            d = 2 - (1 / 2 ** (n_bits - 1))
+        elif clip_elem >= 2 ** n_bits - 1:
+            d = 0
         else:
-            s = (b - a) / (2 ** (n_bits - 1))
-            d = 1 - (1 / (2 ** n_bits - 1) * np.round((x_i - a) / s)) + (x_i - b) / (b - a)
+            d = 1 - (np.round(clip_elem) / (2 ** n_bits - 1)) - ((b - x_i) / (b - a))
         dQ.append(d)
     return dQ
 
@@ -28,15 +29,16 @@ def quantization_derivative_max_level(x: np.ndarray, a: float, b: float, n_bits:
     # TODO: vectorize
 
     dQ = []
+    s = (b - a) / (2 ** n_bits - 1)
     for i in range(len(x)):
         x_i = x[i]
-        if x_i <= 0:
+        clip_elem = (x_i - a) / s
+        if clip_elem <= 0:
             d = 0
-        elif x_i >= 2 ** n_bits - 1:
-            d = 2 - (1 / 2 ** (n_bits - 1))
+        elif clip_elem >= 2 ** n_bits - 1:
+            d = 1
         else:
-            s = (b - a) / (2 ** (n_bits - 1))
-            d = (1 / (2 ** n_bits - 1) * np.round((x_i - a) / s)) + (a - x_i) / (b - a)
+            d = (np.round(clip_elem) / (2 ** n_bits - 1)) + ((a - x_i) / (b - a))
         dQ.append(d)
     return dQ
 
@@ -47,15 +49,16 @@ def quantization_derivative_threshold(x: np.ndarray, t: float, n_bits: int):
     # TODO: vectorize
 
     dQ = []
+    s = (2 * t) / (2 ** n_bits)
     for i in range(len(x)):
         x_i = x[i]
-        if x_i <= -t:
+        clip_elem = (x_i + t) / s
+        if clip_elem <= 0:
             d = -1
-        elif x_i >= 2 * t * (1 - 1 / (2 ** n_bits)):
-            d = 2 - (1 / 2 ** (n_bits - 1))
+        elif clip_elem >= 2 ** n_bits - 1:
+            d = 0
         else:
-            s = t / (2 ** (n_bits - 1))
-            d = (1 / (2 ** n_bits - 1)) * np.round((x_i / s)) + - x_i
+            d = -1 + (np.round(clip_elem) / (2 ** (n_bits - 1))) - x_i / t
         dQ.append(d)
     return dQ
 
@@ -70,6 +73,7 @@ def min_max_derivative(float_tensor: np.ndarray, a: float, b: float, n_bits: int
                     dQ=quantization_derivative_max_level(float_tensor, a=a, b=b, n_bits=n_bits))
 
     return np.asarray([dQ_da, dQ_db])
+
 
 def mse_derivative(x: np.ndarray, q: np.ndarray, dQ: np.ndarray):
     n = len(x)

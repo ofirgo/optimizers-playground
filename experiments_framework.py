@@ -2,7 +2,7 @@ import numpy as np
 from typing import Callable, Dict, List
 
 from derivatives import mse_derivative, min_max_derivative
-from gradient_descent import gradient_descent, sgd
+from gradient_descent import gradient_descent, minibatch_sgd
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import \
     reshape_tensor_for_per_channel_search, uniform_quantize_tensor
 from model_compression_toolkit.common.similarity_analyzer import compute_mse
@@ -69,25 +69,25 @@ if __name__ == "__main__":
 
     init_param_fn = lambda x: np.asarray([np.min(x), np.max(x)])
 
-    optimizer = lambda x0, x: sgd(param=x0.copy(),
-                                  x=x.copy(),
-                                  loss_fn=loss_fn,
-                                  gradient=grad_fn,
-                                  n_epochs=30,
-                                  batch_size=10,
-                                  learn_rate=0.01,
-                                  tolerance=1e-06,
-                                  draw=False,
-                                  seed=2)
+    # optimizer = lambda x0, x: sgd(param=x0.copy(),
+    #                               x=x.copy(),
+    #                               loss_fn=loss_fn,
+    #                               gradient=grad_fn,
+    #                               n_epochs=30,
+    #                               batch_size=10,
+    #                               learn_rate=0.01,
+    #                               tolerance=1e-06,
+    #                               draw=False,
+    #                               seed=2)
 
-    # optimizer = lambda x0, x: gradient_descent(param=x0.copy(),
-    #                                            x=x.copy(),
-    #                                            loss_fn=loss_fn,
-    #                                            gradient=grad_fn,
-    #                                            n_iter=50,
-    #                                            learn_rate=0.01,
-    #                                            tolerance=1e-06,
-    #                                            draw=False)
+    optimizer = lambda x0, x: gradient_descent(param=x0.copy(),
+                                               x=x.copy(),
+                                               loss_fn=loss_fn,
+                                               gradient=grad_fn,
+                                               n_iter=50,
+                                               learn_rate=0.01,
+                                               tolerance=1e-06,
+                                               draw=False)
 
     loaded_weights = load_network_weights(model_name='mobilenetv2',
                                           layers=['block_2_depthwise_BN', 'block_8_project_BN', 'block_14_depthwise'])

@@ -18,15 +18,15 @@ def draw_gd(n_iter, loss_res, param_res):
     plt.show()
     plt.cla()
 
-    plt.plot(range(n_iter), param_res)
-    plt.xlabel("Iteration")
-    # plt.xticks(range(n_iter), fontsize=6)
-    plt.ylabel("Parameter Value")
-    plt.show()
-    plt.cla()
+    # plt.plot(range(n_iter), param_res)
+    # plt.xlabel("Iteration")
+    # # plt.xticks(range(n_iter), fontsize=6)
+    # plt.ylabel("Parameter Value")
+    # plt.show()
+    # plt.cla()
 
 
-def sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_epochs: int = 10,
+def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_epochs: int = 10,
         learn_rate: float = 0.1, tolerance: float = 1e-06, batch_size: int = 1, seed=1, draw: bool = False):
     if batch_size > len(x):
         print("Batch size is larger then the number of data samples, folding to batch_size=1...")
@@ -125,23 +125,23 @@ def threshold_gd_example(weights_tensor, n_bits):
                            loss_fn=loss_fn,
                            gradient=grad_fn,
                            n_iter=30,
-                           learn_rate=0.08,
+                           learn_rate=0.005,
                            tolerance=1e-06,
                            draw=True)
 
-    batch_res = sgd(param=init_param.copy(),
-                    x=weights_tensor.copy(),
-                    loss_fn=loss_fn,
-                    gradient=grad_fn,
-                    n_epochs=50,
-                    learn_rate=0.001,
-                    tolerance=1e-06,
-                    batch_size=10,
-                    seed=2,
-                    draw=True)
+    # batch_res = minibatch_sgd(param=init_param.copy(),
+    #                           x=weights_tensor.copy(),
+    #                           loss_fn=loss_fn,
+    #                           gradient=grad_fn,
+    #                           n_epochs=50,
+    #                           learn_rate=0.001,
+    #                           tolerance=1e-06,
+    #                           batch_size=10,
+    #                           seed=2,
+    #                           draw=True)
 
     print(init_param)
-    print(res, batch_res)
+    print(res)
 
 
 def min_max_gd_example(weights_tensor, n_bits):
@@ -161,28 +161,29 @@ def min_max_gd_example(weights_tensor, n_bits):
                            tolerance=1e-06,
                            draw=True)
 
-    batch_res = sgd(param=init_param.copy(),
-                    x=weights_tensor.copy(),
-                    loss_fn=loss_fn,
-                    gradient=grad_fn,
-                    n_epochs=50,
-                    learn_rate=0.001,
-                    tolerance=1e-06,
-                    batch_size=10,
-                    seed=2,
-                    draw=True)
+    # batch_res = minibatch_sgd(param=init_param.copy(),
+    #                           x=weights_tensor.copy(),
+    #                           loss_fn=loss_fn,
+    #                           gradient=grad_fn,
+    #                           n_epochs=50,
+    #                           learn_rate=0.001,
+    #                           tolerance=1e-06,
+    #                           batch_size=10,
+    #                           seed=2,
+    #                           draw=True)
 
     print("Init: ", init_param)
-    print(res, batch_res)
+    print(res)
 
 
 if __name__ == "__main__":
     loaded_weights = load_network_weights(model_name='mobilenetv2',
-                                          layers=['block_2_depthwise_BN'])
-    weights_tensor = loaded_weights['block_2_depthwise_BN']
+                                          layers=['block_2_depthwise'])
+    weights_tensor = loaded_weights['block_2_depthwise']['weights']
     print(weights_tensor.shape)
+    weights_tensor = weights_tensor.flatten()
 
-    threshold_gd_example(weights_tensor, 8)
-    # min_max_gd_example(weights_tensor, 8)
+    # threshold_gd_example(weights_tensor, 8)
+    min_max_gd_example(weights_tensor, 8)
 
 

@@ -27,7 +27,7 @@ def draw_gd(n_iter, loss_res, param_res):
 
 
 def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_epochs: int = 10,
-        learn_rate: float = 0.1, tolerance: float = 1e-06, batch_size: int = 1, seed=1, draw: bool = False):
+                  learn_rate: float = 0.1, tolerance: float = 1e-06, batch_size: int = 1, seed=1, draw: bool = False):
     if batch_size > len(x):
         print("Batch size is larger then the number of data samples, folding to batch_size=1...")
         batch_size = 1
@@ -81,7 +81,8 @@ def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient:
 
 
 def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_iter: int = 50,
-                     learn_rate: float = 0.1, tolerance: float = 1e-06, grad_norm: float = False, draw: bool = False):
+                     learn_rate: float = 0.1, tolerance: float = 1e-06, grad_norm: bool = False,
+                     grad_noise: bool = False, draw: bool = False):
     vector = param  # this is the parameter we are optimizing
     loss_res = []
     param_res = []
@@ -100,6 +101,8 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
             break
 
         grad = gradient(vector, x)
+        # TODO: add option to choose different parameters for gradient noise std
+        grad = grad if not grad_noise else grad + np.random.normal(loc=0.0, scale=0.01 / ((1 + (i + 1)) ** 0.55))
         grad_squared = 1 if not grad_norm else grad_squared + (grad ** 2)  # running sum for gradient normalization
         vector = vector - (learn_rate / np.sqrt(grad_squared)) * grad
 
@@ -129,6 +132,7 @@ def threshold_gd_example(weights_tensor, n_bits):
                            learn_rate=1e-2,
                            tolerance=1e-6,
                            grad_norm=True,
+                           grad_noise=True,
                            draw=True)
 
     # batch_res = minibatch_sgd(param=init_param.copy(),
@@ -162,6 +166,7 @@ def min_max_gd_example(weights_tensor, n_bits):
                            learn_rate=1e-2,
                            tolerance=1e-6,
                            grad_norm=True,
+                           grad_noise=True,
                            draw=True)
 
     # batch_res = minibatch_sgd(param=init_param.copy(),
@@ -186,7 +191,7 @@ if __name__ == "__main__":
     print(weights_tensor.shape)
     weights_tensor = weights_tensor.flatten()
 
-    # threshold_gd_example(weights_tensor, 8)
-    min_max_gd_example(weights_tensor, 8)
+    threshold_gd_example(weights_tensor, 8)
+    # min_max_gd_example(weights_tensor, 8)
 
 

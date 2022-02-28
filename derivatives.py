@@ -60,7 +60,7 @@ def quantization_derivative_threshold(x: np.ndarray, t: float, n_bits: int):
     return dQ
 
 
-def min_man_derivative(float_tensor: np.ndarray, a: float, b: float, n_bits: int, loss_fn: Callable):
+def min_max_derivative(float_tensor: np.ndarray, a: float, b: float, n_bits: int, loss_fn: Callable):
     dQ_da = loss_fn(x=float_tensor,
                      q=uniform_quantize_tensor(float_tensor, range_min=a, range_max=b, n_bits=n_bits),
                      dQ=quantization_derivative_min_level(float_tensor, a=a, b=b, n_bits=n_bits))

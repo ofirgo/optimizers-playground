@@ -45,6 +45,8 @@ def load_layer_weights(model_name, layer_name):
         else:
             channel_axis = channels[0].split(" ")[1]
             channel_axis = None if channel_axis == "None" else int(channel_axis)
+            if not channel_axis:
+                print(f"Layer {layer_name} channel axis is None - can't optimize per channel")
 
         layer_weights = pickle.load(infile)
         return {'weights': layer_weights, 'channel_axis': channel_axis}

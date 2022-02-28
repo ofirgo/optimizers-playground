@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from derivatives import mse_derivative, quantization_derivative_threshold, quantization_derivative_min_level, \
-    quantization_derivative_max_level, min_man_derivative
+    quantization_derivative_max_level, min_max_derivative
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import quantize_tensor, \
     uniform_quantize_tensor
 from model_compression_toolkit.common.similarity_analyzer import compute_mse
@@ -28,7 +28,9 @@ def draw_gd(n_iter, loss_res, param_res):
 
 def sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_epochs: int = 10,
         learn_rate: float = 0.1, tolerance: float = 1e-06, batch_size: int = 1, seed=1, draw: bool = False):
-    # TODO: verify batch size is smaller than length of input
+    if batch_size > len(x):
+        print("Batch size is larger then the number of data samples, folding to batch_size=1...")
+        batch_size = 1
 
     # random split to batches
     rng = np.random.default_rng(seed=seed)
@@ -146,7 +148,7 @@ def min_max_gd_example(weights_tensor, n_bits):
     loss_fn = lambda min_max, float_tensor: compute_mse(float_tensor,
                                                         uniform_quantize_tensor(float_tensor, range_min=min_max[0],
                                                                                 range_max=min_max[1], n_bits=n_bits))
-    grad_fn = lambda min_max, float_tensor: min_man_derivative(float_tensor, a=min_max[0], b=min_max[1], n_bits=n_bits,
+    grad_fn = lambda min_max, float_tensor: min_max_derivative(float_tensor, a=min_max[0], b=min_max[1], n_bits=n_bits,
                                                                loss_fn=mse_derivative)
 
     init_param = np.asarray([np.min(weights_tensor), np.max(weights_tensor)])

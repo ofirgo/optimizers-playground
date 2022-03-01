@@ -118,3 +118,14 @@ grad_fn_dict = {
     "Threshold_MSE": threshold_mse_grad,
     "Min_Max_MSE": min_max_mse_grad,
 }
+
+
+"""
+Tensors Kits
+"""
+tensors_kits = {
+    "mobilenetv2_predictions": ['predictions'],  # large channels (1280x1000)
+    "mobilenetv2_conv": ['Conv1', 'Conv_1'],  # two convolution layers (small and large)
+    "mobilenetv2_depthwise": ['block_1_depthwise', 'block_4_depthwise', 'block_7_depthwise', 'block_9_depthwise', 'block_14_depthwise'],  # multiple small channels (3x3)
+    "mobilenetv2_project": ['block_2_project', 'block_5_project', 'block_8_project', 'block_10_project', 'block_15_project'],  # multiple medium channels
+}

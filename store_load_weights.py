@@ -109,13 +109,20 @@ if __name__ == "__main__":
     # Store all layers
     ####
     model_name = 'mobilenetv2'
-    create_network_all_weights_db(model_name)
+    # create_network_all_weights_db(model_name)
 
     ####
     # Load multiple layers
     ####
-    loaded_weights = load_network_weights(model_name=model_name,
-                         layers=['block_8_project_BN', 'block_8_project', 'block_8_expand_BN', 'block_8_expand',
-                                 'block_8_depthwise_BN', 'block_8_depthwise'])
-    for l_name, weights in loaded_weights.items():
-        print(l_name, weights['weights'].shape, weights['channel_axis'])
+    # loaded_weights = load_network_weights(model_name=model_name,
+    #                      layers=['block_8_project_BN', 'block_8_project', 'block_8_expand_BN', 'block_8_expand',
+    #                              'block_8_depthwise_BN', 'block_8_depthwise'])
+    # for l_name, weights in loaded_weights.items():
+    #     print(l_name, weights['weights'].shape, weights['channel_axis'])
+
+    ####
+    # Print all layer names and shapes
+    ####
+    loaded_weights = get_network_weights(model_name)
+    for name, weights in loaded_weights.items():
+        print(name, weights['weights'].shape, weights['channel_axis'])

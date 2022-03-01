@@ -82,15 +82,16 @@ def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient:
 
 def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_iter: int = 50,
                      learn_rate: float = 0.1, tolerance: float = 1e-06, grad_norm: bool = False,
-                     grad_noise: bool = False, draw: bool = False):
+                     grad_noise: bool = False, draw: bool = False, verbose: bool = False):
     vector = param  # this is the parameter we are optimizing
     loss_res = []
     param_res = []
-    best = {"param": vector, "loss": loss_fn(vector, x), "it": 0}
+    best = {"param": vector, "loss": loss_fn(vector, x), "it": 0, "status": "Running"}
     real_n_iter = n_iter
     grad_squared = 0
     for i in range(n_iter):
-        print(f"### Iteration {i} ###")
+        if verbose:
+            print(f"### Iteration {i} ###")
         param_res.append(vector)
         loss = loss_fn(vector, x)
         loss_res.append(loss)
@@ -98,6 +99,7 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
         if loss <= tolerance:
             # TODO: add to res dict indication about the cause for termination
             real_n_iter = i + 1  # for plotting, in case we finished before completing all iterations
+            best['status'] = f"Loss {loss} < tolerance {tolerance}"
             break
 
         grad = gradient(vector, x)
@@ -106,10 +108,15 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
         grad_squared = 1 if not grad_norm else grad_squared + (grad ** 2)  # running sum for gradient normalization
         vector = vector - (learn_rate / np.sqrt(grad_squared)) * grad
 
-        print(f"Param = {vector}")
-        print(f"Loss: {loss}")
-        print(f"Gradient: {grad}")
-        print()
+        if verbose:
+            print(f"Param = {vector}")
+            print(f"Loss: {loss}")
+            print(f"Gradient: {grad}")
+            print()
+
+    if real_n_iter != n_iter:
+        best['status'] = "Exceeded max iteration"
+    best['norm_loss'] = best['loss'] / np.sqrt(np.sum([y ** 2 for y in x]))
 
     if draw:
         draw_gd(real_n_iter, loss_res, param_res)

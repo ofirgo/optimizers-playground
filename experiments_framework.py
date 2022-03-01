@@ -55,6 +55,15 @@ def get_median_error(results_list):
     return np.median(errors_list)
 
 
+def get_avg_norm_error(results_list):
+    errors_list = [res['norm_loss'] for res in results_list]
+    return np.average(errors_list)
+
+
+def get_median_norm_error(results_list):
+    errors_list = [res['norm_loss'] for res in results_list]
+    return np.median(errors_list)
+
 def get_avg_iter(results_list):
     errors_list = [res['it'] for res in results_list]
     return np.average(errors_list)

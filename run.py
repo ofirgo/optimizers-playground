@@ -1,8 +1,21 @@
-from experiments_framework import run_optimizer_experiment
+from experiments_framework import run_optimizer_experiment, get_avg_error, get_median_error, get_avg_iter, \
+    get_median_iter, get_avg_norm_error, get_median_norm_error
 from gradient_descent import normalize_loss
 from setup import optimizers_dict, loss_fn_dict, grad_fn_dict, tensors_kits
 from store_load_weights import load_network_weights
 import numpy as np
+
+
+def print_aggregated_results_for_opt(opt_name, results_list):
+    print(f"Summarized results for optimizer {opt_name}")
+    print("Average Normalized Error:", get_avg_norm_error(results_list))
+    print("Median Normalized Error:", get_median_norm_error(results_list))
+    print("Average Number of Iterations:", get_avg_iter(results_list))
+    print("Median Number of Iterations::", get_median_iter(results_list))
+    print("*iterations for self-implemented optimizers indicates the iteration number in which "
+          "the best result was found, not the total number of iterations")
+    print("")
+
 
 if __name__ == "__main__":
     n_bits = 8
@@ -31,4 +44,6 @@ if __name__ == "__main__":
                                                 opt_name=opt_name)
 
         for res in results_list:
-            print(opt_name, res['norm_loss'], res['param'])
+            if not per_channel:
+                print(opt_name, res['norm_loss'], res['param'])
+        print_aggregated_results_for_opt(opt_name, results_list)

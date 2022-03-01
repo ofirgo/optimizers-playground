@@ -116,12 +116,16 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
 
     if real_n_iter != n_iter:
         best['status'] = "Exceeded max iteration"
-    best['norm_loss'] = best['loss'] / np.sqrt(np.sum([y ** 2 for y in x]))
+    best['norm_loss'] = normalize_loss(best['loss'], x)
 
     if draw:
         draw_gd(real_n_iter, loss_res, param_res)
 
     return best
+
+
+def normalize_loss(loss, x):
+    return loss / np.sqrt(np.sum([y ** 2 for y in x]))
 
 
 def threshold_gd_example(weights_tensor, n_bits):

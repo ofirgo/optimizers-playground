@@ -2,14 +2,15 @@ import numpy as np
 from typing import Callable, Dict, List
 
 from derivatives import mse_derivative, min_max_derivative
-from gradient_descent import gradient_descent, minibatch_sgd
+from gradient_descent import gradient_descent, minibatch_sgd, normalize_loss
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import \
     reshape_tensor_for_per_channel_search, uniform_quantize_tensor
 from model_compression_toolkit.common.similarity_analyzer import compute_mse
 from store_load_weights import load_network_weights
 
 
-def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_list: List[Dict], per_channel=False):
+def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_list: List[Dict], per_channel=False,
+                             opt_name: str = None):
     # opt should be a wrapper that already contains all optimizer parameters, except init value and tensor data
     # get_init_param should except a tensor and return the init value for the tensors parameters optimization
 
@@ -26,14 +27,22 @@ def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_li
                 init_param = get_init_param(channel_tensor)
                 res = opt(init_param.copy(),
                           channel_tensor.copy())
+                if "Scipy" in opt_name:
+                    res = adjust_scipy_results(res, channel_tensor)
                 results_list.append(res)
         else:
             init_param = get_init_param(tensor)
             res = opt(init_param.copy(),
                       tensor.copy().flatten())
+            if "Scipy" in opt_name:
+                res = adjust_scipy_results(res, tensor)
             results_list.append(res)
 
     return results_list
+
+
+def adjust_scipy_results(res, x):
+    return {"param": res.x, "loss": res.fun, "norm_loss": normalize_loss(res.fun, x), "it": res.nit, "status": res.status}
 
 
 def get_avg_error(results_list):

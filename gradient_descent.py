@@ -155,7 +155,7 @@ def min_max_gd_example(weights_tensor, n_bits):
                                                         uniform_quantize_tensor(float_tensor, range_min=min_max[0],
                                                                                 range_max=min_max[1], n_bits=n_bits))
     grad_fn = lambda min_max, float_tensor: min_max_derivative(float_tensor, a=min_max[0], b=min_max[1], n_bits=n_bits,
-                                                               loss_fn=mse_derivative)
+                                                               loss_fn_derivative=mse_derivative)
 
     init_param = np.asarray([np.min(weights_tensor), np.max(weights_tensor)])
     res = gradient_descent(param=init_param.copy(),
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     print(weights_tensor.shape)
     weights_tensor = weights_tensor.flatten()
 
-    threshold_gd_example(weights_tensor, 8)
-    # min_max_gd_example(weights_tensor, 8)
+    # threshold_gd_example(weights_tensor, 8)
+    min_max_gd_example(weights_tensor, 8)
 
 

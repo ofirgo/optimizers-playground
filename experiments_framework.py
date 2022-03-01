@@ -65,7 +65,7 @@ if __name__ == "__main__":
                                                         uniform_quantize_tensor(float_tensor, range_min=min_max[0],
                                                                                 range_max=min_max[1], n_bits=n_bits))
     grad_fn = lambda min_max, float_tensor: min_max_derivative(float_tensor, a=min_max[0], b=min_max[1], n_bits=n_bits,
-                                                               loss_fn=mse_derivative)
+                                                               loss_fn_derivative=mse_derivative)
 
     init_param_fn = lambda x: np.asarray([np.min(x), np.max(x)])
 

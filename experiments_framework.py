@@ -4,8 +4,9 @@ from typing import Callable, Dict, List
 from derivatives import mse_derivative, min_max_derivative
 from gradient_descent import gradient_descent, minibatch_sgd, normalize_loss
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import \
-    reshape_tensor_for_per_channel_search, uniform_quantize_tensor
+    reshape_tensor_for_per_channel_search, uniform_quantize_tensor, fix_range_to_include_zero, calculate_delta
 from model_compression_toolkit.common.similarity_analyzer import compute_mse
+from setup import min_max_mse_loss
 from store_load_weights import load_network_weights
 
 
@@ -29,6 +30,8 @@ def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_li
                           channel_tensor.copy())
                 if "Scipy" in opt_name:
                     res = adjust_scipy_results(res, channel_tensor)
+                # add the actual optimized tensor to results for later evaluation
+                res['tensor'] = channel_tensor
                 results_list.append(res)
         else:
             init_param = get_init_param(tensor)
@@ -36,6 +39,8 @@ def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_li
                       tensor.copy().flatten())
             if "Scipy" in opt_name:
                 res = adjust_scipy_results(res, tensor)
+            # add the actual optimized tensor to results for later evaluation
+            res['tensor'] = tensor
             results_list.append(res)
 
     return results_list
@@ -64,6 +69,7 @@ def get_median_norm_error(results_list):
     errors_list = [res['norm_loss'] for res in results_list]
     return np.median(errors_list)
 
+
 def get_avg_iter(results_list):
     errors_list = [res['it'] for res in results_list]
     return np.average(errors_list)
@@ -72,6 +78,54 @@ def get_avg_iter(results_list):
 def get_median_iter(results_list):
     errors_list = [res['it'] for res in results_list]
     return int(np.median(errors_list))
+
+
+def evaluate_optimizer_results(results_list, n_bits):
+    clips = []
+    rounds = []
+    for res in results_list:
+        tensor = res['tensor']
+        param = res['param']
+
+        if len(param) == 1:
+            # param is threshold, need to convert to min max range
+            delta = calculate_delta(param, n_bits, signed=True)
+            param = np.array([-param, param - delta])
+
+        param = fix_range_to_include_zero(param[0], param[1], n_bits, False, 0)
+
+        clip_err = compute_clipping_mse_error(tensor.flatten(), param, n_bits)
+        round_err = compute_rounding_mse_error(tensor.flatten(), param, n_bits)
+        clips.append(clip_err)
+        rounds.append(round_err)
+
+    return {"avg_norm_clip": np.average(clips), "avg_norm_round": np.average(rounds)}
+
+
+def compute_clipping_mse_error(x, mm, n_bits):
+    # returns the normalized clipping noise
+    a, b = mm
+    cond_idxs = np.where((x < a) | (x > b))[0]
+    origin_data = x[cond_idxs]
+
+    if len(cond_idxs) == 0:
+        return 0
+
+    err = min_max_mse_loss(np.array([a, b]), origin_data, n_bits)
+    return normalize_loss(err, origin_data)
+
+
+def compute_rounding_mse_error(channel_data, mm, n_bits):
+    # returns the normalized rounding noise
+    a, b = mm
+    cond_idxs = np.where((channel_data > a) & (channel_data < b))[0]
+    origin_data = channel_data[cond_idxs]
+
+    if len(cond_idxs) == 0:
+        return 0
+
+    err = min_max_mse_loss(np.array([a, b]), origin_data, n_bits)
+    return normalize_loss(err, origin_data)
 
 
 if __name__ == "__main__":

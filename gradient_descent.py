@@ -1,4 +1,5 @@
-from typing import Callable
+from operator import itemgetter
+from typing import Callable, List
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -78,6 +79,52 @@ def minibatch_sgd(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient:
         draw_gd(real_n_epochs, loss_res, param_res)
 
     return best
+
+
+def multiple_restarts_gradient_descent(init_params: List[np.ndarray], x: np.ndarray, loss_fn: Callable, gradient: Callable,
+                                       n_iter: int = 50, learn_rate: float = 0.1, tolerance: float = 1e-06,
+                                       grad_norm: bool = False, grad_noise: bool = False, draw: bool = False,
+                                       verbose: bool = False):
+    all_results = []
+    for param in init_params:
+        print(f"Running GD with initial param: {param}")
+        curr_res = gradient_descent(param, x, loss_fn, gradient, n_iter, learn_rate, tolerance, grad_norm, grad_noise)
+        all_results.append(curr_res)
+        print("Results:", curr_res)
+
+    min_loss_res = min(all_results, key=itemgetter('loss'))
+    return min_loss_res
+
+
+def extract_init_threshold_params(x: np.ndarray, n: int):
+    x_sorted = x.copy()
+    x_sorted = np.sort(np.abs(x_sorted))
+    x_sorted = x_sorted[::-1]
+    num_restarts = min(n, len(x))
+    init_params = x_sorted[:num_restarts]
+
+    return init_params
+
+
+def extract_init_min_max_params(x: np.ndarray, n: int):
+    x_asc = sorted(x.copy())[1:]
+    x_desc = sorted(x.copy())[::-1][1:]
+    num_restarts = min(n, len(x))
+
+    init_params = [np.array([np.min(x), np.max(x)])]
+
+    for i in range(1, num_restarts):
+        if i % 2 == 0:
+            # replace left bound
+            next = init_params[-1].copy()
+            next[0] = x_asc.pop(0)
+        else:
+            # replace right bound
+            next = init_params[-1].copy()
+            next[1] = x_desc.pop(0)
+        init_params.append(next)
+
+    return init_params
 
 
 def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradient: Callable, n_iter: int = 50,
@@ -203,6 +250,42 @@ if __name__ == "__main__":
     weights_tensor = weights_tensor.flatten()
 
     # threshold_gd_example(weights_tensor, 8)
-    min_max_gd_example(weights_tensor, 8)
+    # min_max_gd_example(weights_tensor, 8)
 
+    # Test gd with restart
+    n_bits = 8
+    loss_fn = lambda t, float_tensor: compute_mse(float_tensor,
+                                                  quantize_tensor(float_tensor, t, n_bits=n_bits, signed=True))
+    grad_fn = lambda t, float_tensor: mse_derivative(x=float_tensor,
+                                                     q=quantize_tensor(float_tensor, t, n_bits=n_bits, signed=True),
+                                                     dQ=quantization_derivative_threshold(float_tensor, t, n_bits))
+    init_thresholds = extract_init_threshold_params(weights_tensor, 30)
+    print("Init params:", init_thresholds)
+    res = multiple_restarts_gradient_descent(init_params=init_thresholds,
+                                       x=weights_tensor.copy(),
+                                       loss_fn=loss_fn,
+                                       gradient=grad_fn,
+                                       n_iter=100,
+                                       learn_rate=1e-2,
+                                       tolerance=1e-6,
+                                       grad_norm=False,
+                                       grad_noise=False)
 
+    # n_bits = 8
+    # loss_fn = lambda min_max, float_tensor: compute_mse(float_tensor,
+    #                                                     uniform_quantize_tensor(float_tensor, range_min=min_max[0],
+    #                                                                             range_max=min_max[1], n_bits=n_bits))
+    # grad_fn = lambda min_max, float_tensor: min_max_derivative(float_tensor, a=min_max[0], b=min_max[1], n_bits=n_bits,
+    #                                                            loss_fn_derivative=mse_derivative)
+    # init_min_max = extract_init_min_max_params(weights_tensor, 20)
+    # print("Init params:", init_min_max)
+    # res = multiple_restarts_gradient_descent(init_params=init_min_max,
+    #                                          x=weights_tensor.copy(),
+    #                                          loss_fn=loss_fn,
+    #                                          gradient=grad_fn,
+    #                                          n_iter=50,
+    #                                          learn_rate=1e-2,
+    #                                          tolerance=1e-6,
+    #                                          grad_norm=False,
+    #                                          grad_noise=False)
+    print(res)

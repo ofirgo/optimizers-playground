@@ -1,7 +1,5 @@
-from experiments_framework import run_optimizer_experiment, get_avg_error, get_median_error, get_avg_iter, \
+from experiments_framework import run_optimizer_experiment, get_avg_iter, \
     get_median_iter, get_avg_norm_error, get_median_norm_error, evaluate_optimizer_results
-from gradient_descent import normalize_loss
-from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import uniform_quantize_tensor
 from setup import optimizers_dict, loss_fn_dict, grad_fn_dict, tensors_kits
 from store_load_weights import load_network_weights
 import numpy as np

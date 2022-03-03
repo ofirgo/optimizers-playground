@@ -2,7 +2,7 @@
 from scipy import optimize
 
 from derivatives import mse_derivative, quantization_derivative_threshold, min_max_derivative
-from gradient_descent import gradient_descent
+from optimizers.gradient_descent import gradient_descent
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import quantize_tensor, \
     uniform_quantize_tensor
 from model_compression_toolkit.common.similarity_analyzer import compute_mse

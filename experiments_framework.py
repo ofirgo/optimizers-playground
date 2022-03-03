@@ -2,7 +2,7 @@ import numpy as np
 from typing import Callable, Dict, List
 
 from derivatives import mse_derivative, min_max_derivative
-from gradient_descent import gradient_descent, minibatch_sgd, normalize_loss
+from optimizers.gradient_descent import gradient_descent, normalize_loss
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import \
     reshape_tensor_for_per_channel_search, uniform_quantize_tensor, fix_range_to_include_zero, calculate_delta
 from model_compression_toolkit.common.similarity_analyzer import compute_mse

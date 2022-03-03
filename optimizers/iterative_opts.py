@@ -17,6 +17,14 @@ def plot_loss(loos_res):
     plt.cla()
 
 
+def plot_range(ranges):
+    plt.plot(ranges)
+    plt.xlabel("Iteration")
+    plt.ylabel("Bounds")
+    plt.show()
+    plt.cla()
+
+
 def iterative_fixed_range_search(init_param: np.ndarray, x: np.ndarray, loss_fn: Callable, n_intervals: int = 20,
                                  n_iter: int = 10, alpha: float = 0.6, beta: float = 1.2,
                                  tolerance: float = 1e-09, draw: bool = False, verbose: bool = False):
@@ -59,12 +67,16 @@ def iterative_decreasing_range_search(init_param: np.ndarray, x: np.ndarray, los
 
     # for drawing
     all_loss_res = []
+    all_ranges = []
 
     for n in range(n_iter):
         prev_best_loss = best['loss']
         curr_res = search_fixed_range_intervals(curr_param * scaler, x, loss_fn, n_intervals)
         curr_param = curr_res['param']
+
         all_loss_res.append(curr_res['loss'])
+        all_ranges.append(curr_param * scaler)
+
         best = min(best, curr_res, key=itemgetter('loss'))
 
         if verbose:
@@ -80,10 +92,11 @@ def iterative_decreasing_range_search(init_param: np.ndarray, x: np.ndarray, los
         if n % freq == 0:
             scaler *= factor
             # prevent min bound from exceeding max bound
-            scaler = np.array([min(scaler[0], 0.99), max(scaler[1], 1.01)])
+            scaler = np.array([min(scaler[0], 0.97), max(scaler[1], 1.03)])
 
     if draw:
         plot_loss(all_loss_res)
+        plot_range(all_ranges)
 
     return best
 
@@ -114,7 +127,7 @@ if __name__ == "__main__":
 
     res = iterative_decreasing_range_search(init_param=max_tensor,
                                             x=weights_tensor, loss_fn=loss_fn, n_intervals=100,
-                                            n_iter=300, alpha=0.6, beta=1.2, tolerance=1e-20,
+                                            n_iter=300, alpha=0.5, beta=1.3, tolerance=1e-11,
                                             factor=(1.02, 0.98), freq=10,
                                             draw=True, verbose=False)
     print(res)

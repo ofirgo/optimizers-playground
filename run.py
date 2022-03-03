@@ -25,10 +25,10 @@ if __name__ == "__main__":
     # init_param_fn = lambda x: np.asarray([np.max(np.abs(x))])
     init_param_fn = lambda x: np.asarray([np.min(x), np.max(x)])
 
-    # loaded_weights = load_network_weights(model_name='mobilenetv2',
-    #                                       layers=tensors_kits['mobilenetv2_conv'])
     loaded_weights = load_network_weights(model_name='mobilenetv2',
-                                          layers=tensors_kits['mobilenetv2_depthwise'])
+                                          layers=tensors_kits['mobilenetv2_conv'])
+    # loaded_weights = load_network_weights(model_name='mobilenetv2',
+    #                                       layers=tensors_kits['mobilenetv2_depthwise'])
     weights_list = [weights for weights in loaded_weights.values()]
     per_channel = True
 

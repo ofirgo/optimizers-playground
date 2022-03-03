@@ -18,7 +18,7 @@ def derivative_min_level(x: float, a: float, b: float, n_bits: int, s: float):
     elif clip_elem >= 2 ** n_bits - 1:
         return 0
     else:
-        return 1 - (np.round(clip_elem) / (2 ** n_bits - 1)) - ((b - x) / (b - a))
+        return ((x - a) / (b - a)) - (np.round(clip_elem) / (2 ** n_bits - 1))
 
 
 def quantization_derivative_max_level(x: np.ndarray, a: float, b: float, n_bits: int):
@@ -34,7 +34,7 @@ def derivative_max_level(x: float, a: float, b: float, n_bits: int, s: float):
     elif clip_elem >= 2 ** n_bits - 1:
         return 1
     else:
-        return (np.round(clip_elem) / (2 ** n_bits - 1)) + ((a - x) / (b - a))
+        return (np.round(clip_elem) / (2 ** n_bits - 1)) - ((x - a) / (b - a))
 
 
 def quantization_derivative_threshold(x: np.ndarray, t: float, n_bits: int):

@@ -108,8 +108,8 @@ if __name__ == "__main__":
     ####
     # Store all layers
     ####
-    model_name = 'mobilenetv2'
-    # create_network_all_weights_db(model_name)
+    model_name = 'resnet50'
+    create_network_all_weights_db(model_name)
 
     ####
     # Load multiple layers

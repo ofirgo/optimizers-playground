@@ -37,8 +37,10 @@ def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_li
             init_param = get_init_param(tensor)
             res = opt(init_param.copy(),
                       tensor.copy().flatten())
-            if "Scipy" in opt_name:
+            if "Scipy" in opt_name or "scipy" in opt_name:
                 res = adjust_scipy_results(res, tensor)
+            if "iterative_" in opt_name:
+                res = adjust_iterative_results(res, tensor)
             # add the actual optimized tensor to results for later evaluation
             res['tensor'] = tensor
             results_list.append(res)
@@ -47,7 +49,13 @@ def run_optimizer_experiment(opt: Callable, get_init_param: Callable, weights_li
 
 
 def adjust_scipy_results(res, x):
-    return {"param": res.x, "loss": res.fun, "norm_loss": normalize_loss(res.fun, x), "it": res.nit, "status": res.status}
+    return {"param": res.x, "loss": res.fun, "norm_loss": normalize_loss(res.fun, x), "it": res.nit,
+            "status": res.status}
+
+
+def adjust_iterative_results(res, x):
+    return {"param": res['param'], "loss": res['loss'], "norm_loss": normalize_loss(res['loss'], x), "it": "NA",
+            "status": "NA"}
 
 
 def get_avg_error(results_list):
@@ -99,7 +107,8 @@ def evaluate_optimizer_results(results_list, n_bits):
         clips.append(clip_err)
         rounds.append(round_err)
 
-    return {"avg_norm_clip": np.average(clips), "avg_norm_round": np.average(rounds)}
+    return {"avg_norm_err": get_avg_norm_error(results_list), "med_norm_err": get_median_norm_error(results_list),
+            "avg_norm_clip": np.average(clips), "avg_norm_round": np.average(rounds)}
 
 
 def compute_clipping_mse_error(x, mm, n_bits):

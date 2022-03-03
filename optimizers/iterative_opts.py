@@ -151,7 +151,7 @@ def iterative_dynamic_range_search(init_range: np.ndarray, x: np.ndarray, scaler
 def search_fixed_range_intervals(range_bounds: np.ndarray, x: np.ndarray, loss_fn: Callable, n_intervals: int = 20):
     intervals = np.linspace(start=range_bounds[0], stop=range_bounds[1], num=n_intervals, dtype=float)
     losses = list(map(lambda t: loss_fn(t, x), intervals))
-    return {"param": intervals[np.argmin(losses)], "loss": np.min(losses)}
+    return {"param": np.array([intervals[np.argmin(losses)]]), "loss": np.min(losses)}
 
 
 # def search_dynamic_range(base_range: np.ndarray, x: np.ndarray, alpha: np.ndarray, beta: np.ndarray, loss_fn: Callable):

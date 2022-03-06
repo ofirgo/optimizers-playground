@@ -4,6 +4,7 @@ from operator import itemgetter
 import numpy as np
 from typing import Callable, Tuple
 import matplotlib.pyplot as plt
+from numpy import random
 from scipy import stats
 
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import quantize_tensor, \
@@ -116,7 +117,7 @@ def iterative_dynamic_range_search(init_range: np.ndarray, x: np.ndarray, scaler
 
     for n in range(n_iter):
         prev_best_loss = best['loss']
-        curr_res = search_dynamic_range(base_range=curr_range_bounds, scalers=scalers, x=x, loss_fn=loss_fn)
+        curr_res = search_dynamic_range(base_range=curr_range_bounds, scalers=scalers, x=x, loss_fn=loss_fn, random_scale=random_step)
         curr_range_bounds = curr_res['param']
         # curr_range_bounds = fix_range_to_include_zero(curr_range_bounds[0], curr_range_bounds[1], 8, False, 0)
         all_loss_res.append(curr_res['loss'])
@@ -132,15 +133,14 @@ def iterative_dynamic_range_search(init_range: np.ndarray, x: np.ndarray, scaler
             break
 
         # change base range a bit by random step
-        if random_step and n % freq == 0:
-            mu = 1.0
-            sigma = 0.2
-            # (lower - mu) / sigma, (upper - mu) / sigma, loc = mu, scale = sigma)
-            step_size = stats.truncnorm((0.75 - mu) / sigma, (1.25 - mu) / sigma, loc=mu, scale=sigma)
-            step_size = step_size.rvs(2)
-            # step_size = np.random.normal(loc=1.0, scale=0.2, size=2)
-            curr_range_bounds *= step_size
-
+        # if random_step and n % freq == 0:
+        #     mu = 1.0
+        #     sigma = 0.2
+        #     # (lower - mu) / sigma, (upper - mu) / sigma, loc = mu, scale = sigma)
+        #     step_size = stats.truncnorm((0.75 - mu) / sigma, (1.25 - mu) / sigma, loc=mu, scale=sigma)
+        #     step_size = step_size.rvs(2)
+        #     # step_size = np.random.normal(loc=1.0, scale=0.2, size=2)
+        #     curr_range_bounds *= step_size
 
     if draw:
         plot_loss(all_loss_res)
@@ -161,7 +161,17 @@ def search_fixed_range_intervals(range_bounds: np.ndarray, x: np.ndarray, loss_f
 #     losses = list(map(lambda r: loss_fn(r, x), ranges))
 #     return {"param": ranges[np.argmin(losses)], "loss": np.min(losses)}
 
-def search_dynamic_range(base_range: np.ndarray, x: np.ndarray, scalers: np.ndarray, loss_fn: Callable):
+def search_dynamic_range(base_range: np.ndarray, x: np.ndarray, scalers: np.ndarray, loss_fn: Callable,
+                         random_scale: bool = False):
+    if random_scale:
+        mu = 1.0
+        sigma = 0.05
+        # (lower - mu) / sigma, (upper - mu) / sigma, loc = mu, scale = sigma)
+        step_size = stats.truncnorm((0.9 - mu) / sigma, (1.1 - mu) / sigma, loc=mu, scale=sigma)
+        random_noise = step_size.rvs(scalers.shape)
+        # # step_size = np.random.normal(loc=1.0, scale=0.2, size=2)
+        # random_noise = random.normal(loc=1.0, scale=0.2, size=scalers.shape)
+        scalers *= random_noise
     ranges = base_range * scalers
     losses = list(map(lambda r: loss_fn(r, x), ranges))
     return {"param": ranges[np.argmin(losses)], "loss": np.min(losses)}
@@ -195,16 +205,15 @@ if __name__ == "__main__":
                                                   uniform_quantize_tensor(float_tensor, r[0], r[1], n_bits=n_bits))
     init_range = np.array([np.min(weights_tensor), np.max(weights_tensor)])
     print(init_range)
-    alpha = np.linspace(0.7, 1.3, 10)
-    beta = np.linspace(0.7, 1.3, 10)
+    alpha = np.linspace(0.6, 1.2, 10)
+    beta = np.linspace(0.6, 1.2, 10)
 
     # To take 1-by-1 from alpha-beta use: scalers = list(np.dstack((alpha, beta)))[0] instead of product
     scalers = np.asarray(list(itertools.product(alpha, beta)))
     print(scalers.shape)
     res = iterative_dynamic_range_search(init_range=init_range, x=weights_tensor, scalers=scalers,
-                                         loss_fn=loss_fn, n_iter=300, tolerance=1e-11,
+                                         loss_fn=loss_fn, n_iter=200, tolerance=1e-11,
                                          random_step=True, freq=20,
                                          draw=True, verbose=False)
-
 
     print(res)

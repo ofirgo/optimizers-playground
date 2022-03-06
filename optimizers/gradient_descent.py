@@ -125,7 +125,8 @@ def gradient_descent(param: np.ndarray, x: np.ndarray, loss_fn: Callable, gradie
 
 
 def normalize_loss(loss, x):
-    return loss / np.sqrt(np.sum([y ** 2 for y in x]))
+    # return loss / np.sum([y ** 2 for y in x])
+    return loss / np.average(x * x)
 
 
 def threshold_gd_example(weights_tensor, n_bits):

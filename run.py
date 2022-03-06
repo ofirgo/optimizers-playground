@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from experiments_framework import run_optimizer_experiment, get_avg_iter, \
     get_median_iter, get_avg_norm_error, get_median_norm_error, evaluate_optimizer_results
 from optimizers.iterative_opts import iterative_fixed_range_search, iterative_decreasing_range_search
@@ -100,7 +101,8 @@ def run_iterative_threshold_opts():
 
 
 def threshold_selection_experiment():
-    n_bits_test = [2, 3, 4, 5, 6, 7, 8]
+    n_bits_test = [4, 5, 6, 8]
+    # n_bits_test = [2, 3, 4, 5, 6, 7, 8]
     init_param_fn = lambda x: np.array([np.max(np.abs(x))])
     optimizers = threshold_optimizers_set
     test_kits = tensors_kits
@@ -138,11 +140,11 @@ def threshold_selection_experiment():
                 log_dict = {**optimizer, **errors_dict, 'kit': kit_name, 'n_bits': n_bits}
                 res_dicts.append(log_dict)
     res_df = pd.DataFrame(res_dicts)
-    res_df.to_csv(f"{output_dir}/all_results.csv")
+    res_df.to_csv(f"{output_dir}/all_results_threshold.csv")
 
 
 def minmax_selection_experiment():
-    n_bits_test = [2, 3, 4, 5, 6, 7, 8]
+    n_bits_test = [4, 5, 6, 8]
     init_param_fn = lambda x: np.array([np.min(x), np.max(x)])
     optimizers = minmax_optimizers_set
     test_kits = tensors_kits
@@ -157,7 +159,7 @@ def minmax_selection_experiment():
 
     res_dicts = []
     for n_bits in n_bits_test:
-        loss_fn = lambda t, x: loss_fn_dict['Threshold_MSE'](t, x, n_bits)
+        loss_fn = lambda r, x: loss_fn_dict['Min_Max_MSE'](r, x, n_bits)
         for kit_name, kit_layer in test_kits.items():
             # Load weights of current test kit
             print(f"----- Running tests on kit {kit_name} with layers {kit_layer} -----")
@@ -169,7 +171,7 @@ def minmax_selection_experiment():
                 # Run optimizer test on layers in kit
                 print(f"Running Optimizer {optimizer['name']}", f"with configuration: {optimizer['config']}")
                 kit_results_list = run_optimizer_experiment(opt=lambda mm, x: optimizer['opt'](mm, x, loss_fn,
-                                                                                               scalers=optimizer['sclaer_builder'](optimizer['alpha'],
+                                                                                               scalers=optimizer['scaler_builder'](optimizer['alpha'],
                                                                                                                                    optimizer['beta'])),
                                                             get_init_param=init_param_fn,
                                                             weights_list=weights_list,
@@ -185,9 +187,10 @@ def minmax_selection_experiment():
     res_df.to_csv(f"{output_dir}/all_results.csv")
 
 
-def plot_threshold_results():
-    output_dir = f"{RESULTS_DIR}/threshold/2022-03-03_14:12:44"
-    df = pd.from_csv(f"{output_dir}/all_results.csv")
+def plot_results():
+    # output_dir = f"{RESULTS_DIR}/threshold/2022-03-03_14:12:44"
+    output_dir = f"{RESULTS_DIR}/minmax/2022-03-06_08:39:50"
+    df = pd.read_csv(f"{output_dir}/all_results.csv")
 
     kits_list = df['kit'].unique()
     bits_list = df['n_bits'].unique()
@@ -195,19 +198,95 @@ def plot_threshold_results():
         kit_rows_df = df.loc[df['kit'] == kit]
         for bits in bits_list:
             bits_rows_df = kit_rows_df.loc[kit_rows_df['n_bits'] == bits]
-            bits_rows_df.plot.bar(w=bits_rows_df['name'], y=bits_rows_df['avg_norm_err'])
-            bits_rows_df.plot.bar(w=bits_rows_df['name'], y=bits_rows_df['avg_norm_clip'])
-            bits_rows_df.plot.bar(w=bits_rows_df['name'], y=bits_rows_df['avg_norm_round'])
+            plot_avg_error(bits_rows_df, bits, kit, output_dir)
 
     for bits in bits_list:
-        bits_rows_df = df.loc[df['n_bits'] == bits]
-        agg_per_opt_df = bits_rows_df.groupby('name', as_index=False)
-        avg_err_per_opt_df = agg_per_opt_df['avg_norm_err'].mean()
-        avg_clip_per_opt_df = agg_per_opt_df['avg_norm_clip'].mean()
-        avg_round_per_opt_df = agg_per_opt_df['avg_norm_clip'].mean()
+        bits_opts_rows_df = df.loc[df['n_bits'] == bits]
+        agg_per_opt_df = bits_opts_rows_df.groupby('name', as_index=False)
+        plot_avg_per_optimizer(agg_per_opt_df, bits, output_dir)
 
+
+def plot_avg_per_optimizer(agg_per_opt_df, bits, output_dir):
+
+    avg_err_per_opt_df = agg_per_opt_df['avg_norm_err'].mean()
+    bar = plt.bar(avg_err_per_opt_df['name'], avg_err_per_opt_df['avg_norm_err'], color='blue')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm error")
+    plt.title(f"Complete Avg Normalized Loss \n {bits}-bit quantization (all test kits)")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='white')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/complete_avg_norm_err-kit_bits_{bits}.png")
+    plt.cla()
+
+    avg_clip_per_opt_df = agg_per_opt_df['avg_norm_clip'].mean()
+    bar = plt.bar(avg_clip_per_opt_df['name'], avg_clip_per_opt_df['avg_norm_clip'], color='orange')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm clipping error")
+    plt.title(f"Complete Avg Normalized Clipping Error \n {bits}-bit quantization (all test kits)")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='black')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/complete_avg_norm_clip-kit_bits_{bits}.png")
+    plt.cla()
+
+    avg_round_per_opt_df = agg_per_opt_df['avg_norm_round'].mean()
+    bar = plt.bar(avg_round_per_opt_df['name'], avg_round_per_opt_df['avg_norm_round'], color='green')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm rounding error")
+    plt.title(f"Complete Avg Normalized Rounding Error \n {bits}-bit quantization (all test kits)")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='white')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/complete_avg_norm_round-kit_bits_{bits}.png")
+    plt.cla()
+
+
+def plot_avg_error(bits_rows_df, bits, kit, output_dir):
+    bar = plt.bar(bits_rows_df['name'], bits_rows_df['avg_norm_err'], color='blue')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm error")
+    plt.title(f"Avg Normalized Loss \n {bits}-bit quantization on {kit} test kit")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='white')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/avg_norm_err-kit_{kit}_bits_{bits}.png")
+    plt.cla()
+
+    bar = plt.bar(bits_rows_df['name'], bits_rows_df['avg_norm_clip'], color='orange')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm clip error")
+    plt.title(f"Avg Normalized Clipping Error \n {bits}-bit quantization on {kit} test kit")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='black')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/avg_norm_clip-kit_{kit}_bits_{bits}.png")
+    plt.cla()
+
+    bar = plt.bar(bits_rows_df['name'], bits_rows_df['avg_norm_round'], color='green')
+    plt.xlabel("Optimizer")
+    plt.ylabel("Avg norm round error")
+    plt.title(f"Avg Normalized Rounding Error \n {bits}-bit quantization on {kit} test kit")
+    plt.xticks(fontsize=6, rotation=-30)
+    for b in bar:
+        height = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2.0, 1e-8, f'{height:.6f}', ha='center', va='bottom', color='white')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/figures/avg_norm_norm-kit_{kit}_bits_{bits}.png")
+    plt.cla()
 
 
 if __name__ == "__main__":
     # threshold_selection_experiment()
     minmax_selection_experiment()
+    # plot_results()

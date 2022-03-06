@@ -108,7 +108,8 @@ def evaluate_optimizer_results(results_list, n_bits):
         rounds.append(round_err)
 
     return {"avg_norm_err": get_avg_norm_error(results_list), "med_norm_err": get_median_norm_error(results_list),
-            "avg_norm_clip": np.average(clips), "avg_norm_round": np.average(rounds)}
+            "avg_norm_clip": np.average(clips), "avg_norm_round": np.average(rounds),
+            "avg_loss": get_avg_error(results_list)}
 
 
 def compute_clipping_mse_error(x, mm, n_bits):
